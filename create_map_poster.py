@@ -217,7 +217,7 @@ def create_poster(city, country, point, dist, output_file, truncate_by_edge):
     print(f"\nGenerating map for {city}, {country}...")
     
     # Progress bar for data fetching
-    with tqdm(total=3, desc="Fetching map data", unit="step", bar_format='{l_bar}{bar}| {n_fmt}/{total_fmt}') as pbar:
+    with tqdm(total=4, desc="Fetching map data", unit="step", bar_format='{l_bar}{bar}| {n_fmt}/{total_fmt}') as pbar:
         # 1. Fetch Street Network
         pbar.set_description("Downloading street network")
         G = ox.graph_from_point(point, dist=dist, dist_type='bbox', network_type='all', truncate_by_edge=truncate_by_edge)
@@ -240,12 +240,19 @@ def create_poster(city, country, point, dist, output_file, truncate_by_edge):
         except:
             parks = None
         pbar.update(1)
+
+        pbar.set_description("Downloading roller coasters")
+        try:
+            coasters = ox.features_from_point(point, tags={'roller_coaster': 'track'}, dist=dist)
+        except:
+            coasters = None
+        pbar.update(1)
     
     print("✓ All data downloaded successfully!")
     
     # 2. Setup Plot
     print("Rendering map...")
-    fig, ax = plt.subplots(figsize=(12, 16), facecolor=THEME['bg'])
+    fig, ax = plt.subplots(figsize=(18, 24), facecolor=THEME['bg'])
     ax.set_facecolor(THEME['bg'])
     ax.set_position([0, 0, 1, 1])
     
@@ -268,10 +275,13 @@ def create_poster(city, country, point, dist, output_file, truncate_by_edge):
         edge_linewidth=edge_widths,
         show=False, close=False
     )
+
+    if coasters is not None and not coasters.empty:
+        coasters.plot(ax=ax, color=THEME['roller_coaster'], linewidth=0.5, zorder=2.5)
     
     # Layer 3: Gradients (Top and Bottom)
-    create_gradient_fade(ax, THEME['gradient_color'], location='bottom', zorder=10)
-    create_gradient_fade(ax, THEME['gradient_color'], location='top', zorder=10)
+    # create_gradient_fade(ax, THEME['gradient_color'], location='bottom', zorder=10)
+    # create_gradient_fade(ax, THEME['gradient_color'], location='top', zorder=10)
     
     # 4. Typography using Roboto font
     if FONTS:
@@ -458,6 +468,9 @@ Examples:
     # Get coordinates and generate poster
     try:
         coords = get_coordinates(args.city, args.country)
+        # coords = (39.3388, -84.2658)# - KI 900
+        # coords = (41.4829, -82.6970)# - CP 1600
+        # coords = (41.4829, -82.6920)# - CP 1500
         output_file = generate_output_filename(args.city, args.theme)
         create_poster(args.city, args.country, coords, args.distance, output_file, args.truncate_by_edge)
         
